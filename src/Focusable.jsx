@@ -1,159 +1,161 @@
-import React, { Component } from 'react';
-import PropTypes from 'prop-types';
+import React from 'react'
+import PropTypes from 'prop-types'
 
-class Focusable extends Component {
-  treePath = [];
-  children = [];
-  indexInParent = 0;
-  focusableId = null;
-  lastFocusChild = null;
+class Focusable extends React.Component {
+  constructor (props, context) {
+    super(props, context)
 
-  constructor(props, context) {
-    super(props, context);
+    this.treePath = []
+    this.children = []
+    this.indexInParent = 0
+    this.focusableId = null
+    this.lastFocusChild = null
   }
 
-  isContainer() {
-    return this.children.length > 0;
+  isContainer () {
+    return this.children.length > 0
   }
 
-  getParent() {
-    return this.context.parentFocusable;
+  getParent () {
+    return this.context.parentFocusable
   }
 
-  addChild(child) {
-    this.children.push(child);
-    return this.children.length - 1;
+  addChild (child) {
+    this.children.push(child)
+    return this.children.length - 1
   }
 
-  removeChild(child) {
-    this.context.navigationComponent.removeFocusableId(child.focusableId);
-    this.children.splice(child.indexInParent, 1);
+  removeChild (child) {
+    this.context.navigationComponent.removeFocusableId(child.focusableId)
+    this.children.splice(child.indexInParent, 1)
 
     for (let i = child.indexInParent; i < this.children.length; ++i) {
-      this.children[i].indexInParent -= 1;
+      this.children[i].indexInParent -= 1
     }
 
-    const currentFocusedPath = this.context.navigationComponent.currentFocusedPath;
-    const index = currentFocusedPath.indexOf(child);
+    const currentFocusedPath = this.context.navigationComponent.currentFocusedPath
+    const index = currentFocusedPath.indexOf(child)
 
     if (index >= 0) {
-      const next = currentFocusedPath[index - 1].getDefaultFocus();
-      this.context.navigationComponent.focus(next);
+      const next = currentFocusedPath[index - 1].getDefaultFocus()
+      this.context.navigationComponent.focus(next)
     }
   }
 
-  getDefaultChild() {
+  getDefaultChild () {
     if (this.lastFocusChild && this.props.retainLastFocus) {
-      return this.lastFocusChild;
+      return this.lastFocusChild
     }
 
-    return 0;
+    return 0
   }
 
-  getNextFocusFrom(direction) {
-    return this.getNextFocus(direction, this.indexInParent);
+  getNextFocusFrom (direction) {
+    return this.getNextFocus(direction, this.indexInParent)
   }
 
-  getNextFocus(direction, focusedIndex) {
+  getNextFocus (direction, focusedIndex) {
     if (!this.getParent()) {
-      return null;
+      return null
     }
 
-    return this.getParent().getNextFocus(direction, focusedIndex);
+    return this.getParent().getNextFocus(direction, focusedIndex)
   }
 
-  getDefaultFocus() {
-    if (this.isContainer())
-      return this.children[this.getDefaultChild()].getDefaultFocus();
+  getDefaultFocus () {
+    if (this.isContainer()) {
+      return this.children[this.getDefaultChild()].getDefaultFocus()
+    }
 
-    return this;
+    return this
   }
 
-  buildTreePath() {
-    this.treePath.unshift(this);
+  buildTreePath () {
+    this.treePath.unshift(this)
 
-    let parent = this.getParent();
+    let parent = this.getParent()
     while (parent) {
-      this.treePath.unshift(parent);
-      parent = parent.getParent();
+      this.treePath.unshift(parent)
+      parent = parent.getParent()
     }
   }
 
-  focus() {
+  focus () {
     this.treePath.map(component => {
-      if (component.props.onFocus)
-        component.props.onFocus(this.indexInParent, this.context.navigationComponent);
-    });
+      if (component.props.onFocus) {
+        component.props.onFocus(this.indexInParent, this.context.navigationComponent)
+      }
+    })
   }
 
-  blur() {
+  blur () {
     if (this.props.onBlur) {
-      this.props.onBlur(this.indexInParent, this.context.navigationComponent);
+      this.props.onBlur(this.indexInParent, this.context.navigationComponent)
     }
   }
 
-  nextChild(focusedIndex) {
+  nextChild (focusedIndex) {
     if (this.children.length === focusedIndex + 1) {
-      return null;
+      return null
     }
 
-    return this.children[focusedIndex + 1];
+    return this.children[focusedIndex + 1]
   }
 
-  previousChild(focusedIndex) {
+  previousChild (focusedIndex) {
     if (focusedIndex - 1 < 0) {
-      return null;
+      return null
     }
 
-    return this.children[focusedIndex - 1];
+    return this.children[focusedIndex - 1]
   }
 
-  getNavigator() {
-    return this.context.navigationComponent;
+  getNavigator () {
+    return this.context.navigationComponent
   }
 
   // React Methods
-  getChildContext() {
-    return { parentFocusable: this };
+  getChildContext () {
+    return { parentFocusable: this }
   }
 
-  componentDidMount() {
+  componentDidMount () {
     if (this.context.parentFocusable) {
-      this.buildTreePath();
-      this.indexInParent = this.getParent().addChild(this);
+      this.buildTreePath()
+      this.indexInParent = this.getParent().addChild(this)
     }
 
     if (this.props.navDefault) {
-      this.context.navigationComponent.setDefault(this);
+      this.context.navigationComponent.setDefault(this)
     }
 
     if (this.props.forceFocus) {
-      this.context.navigationComponent.focus(this);
+      this.context.navigationComponent.focus(this)
     }
 
-    this.focusableId = this.context.navigationComponent.addComponent(this, this.props.focusId);
+    this.focusableId = this.context.navigationComponent.addComponent(this, this.props.focusId)
   }
 
-  componentWillUnmount() {
+  componentWillUnmount () {
     if (this.context.parentFocusable) {
-      this.getParent().removeChild(this);
+      this.getParent().removeChild(this)
     }
   }
 
-  render() {
-    const { focusId, navDefault, onFocus, onBlur, onEnterDown, ...props } = this.props;
+  render () {
+    const { focusId, navDefault, onFocus, onBlur, onEnterDown, onChange, ...props } = this.props
     return <span {...props} />
   }
 }
 
 Focusable.contextTypes = {
   parentFocusable: PropTypes.object,
-  navigationComponent: PropTypes.object,
-};
+  navigationComponent: PropTypes.object
+}
 
 Focusable.childContextTypes = {
-  parentFocusable: PropTypes.object,
-};
+  parentFocusable: PropTypes.object
+}
 
 Focusable.defaultProps = {
   rootNode: false,
@@ -162,7 +164,8 @@ Focusable.defaultProps = {
   retainLastFocus: false,
   onFocus: PropTypes.function,
   onBlur: PropTypes.function,
-  onEnterDown: PropTypes.function
-};
+  onEnterDown: PropTypes.function,
+  onChange: PropTypes.function
+}
 
-export default Focusable;
+export default Focusable

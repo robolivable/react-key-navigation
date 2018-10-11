@@ -12,16 +12,20 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "jshint": "./node_modules/.bin/standard",
     "start": "webpack --watch",
-    "build": "webpack --config webpack.config.js"
+    "build": "rm -rf build; webpack --config webpack.config.js"
   },
   "author": {
     "name": "Gustavo Bennemann de Moura",
     "email": "gustavobenn@gmail.com",
     "url": "https://github.com/dead"
   },
-  "peerDependencies": {
-    "react": "^15.5.4"
+  "standard": {
+    "ignore": [
+      "build",
+      "examples"
+    ]
   },
   "devDependencies": {
     "babel-cli": "^6.26.0",
@@ -32,8 +36,11 @@
     "babel-preset-env": "^1.5.1",
     "babel-preset-react": "^6.24.1",
     "babel-preset-stage-2": "^6.24.1",
-    "prop-types": "^15.6.2",
-    "react": "^15.5.4",
+    "standard": "^12.0.1",
     "webpack": "^2.6.1"
+  },
+  "dependencies": {
+    "react": "^16.3.2",
+    "prop-types": "^15.0.0"
   }
 }
