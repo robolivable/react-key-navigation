@@ -55,7 +55,17 @@ class Grid extends Focusable {
     return (
       <div>
         {grid.map((row, i) =>
-          <HorizontalList key={i}>
+          <HorizontalList
+            key={i}
+            style={(() => {
+              const style = { visibility: 'visible', height: 'auto' }
+              if (i < this.props.gridScroll) {
+                style.visibility = 'hidden'
+                style.height = '0'
+              }
+              return style
+            })()}
+          >
             {row.map(column =>
               column
             )}
