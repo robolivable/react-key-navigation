@@ -49,10 +49,8 @@ class Navigation extends React.Component {
 
   componentDidMount () {
     if (this.onKeyUp) {
-      console.debug('adding keyup ===>', this.onKeyUp)
       window.addEventListener('keyup', this.onKeyUp)
     }
-    console.debug('adding keydown ===>', this._onKeyDown)
     window.addEventListener('keydown', this._onKeyDown)
     this.focusDefault()
   }
@@ -78,20 +76,15 @@ class Navigation extends React.Component {
       case (KEYBOARD_UP.code):
       case (KEYBOARD_RIGHT.code):
       case (KEYBOARD_DOWN.code):
-        console.debug('directional event captured ===>', e)
-
         let nextFocusedPath = this.lastFocusedPath
         if (this.currentFocusedPath.length) {
           nextFocusedPath = this.currentFocusedPath
         }
 
-        console.debug('nextFocusedPath ===>', nextFocusedPath)
-
         if (nextFocusedPath.length) {
           const direction = gDirectionFromEvent(e)
           this.focusNext(direction, nextFocusedPath)
         }
-        console.debug('halting event propagation...')
         e.preventDefault()
         e.stopPropagation()
         return
