@@ -1,221 +1,229 @@
-import React, { Component } from 'react';
-import PropTypes from 'prop-types';
+import React from 'react'
+import PropTypes from 'prop-types'
 
-import VerticalList from './VerticalList.jsx';
-
-const reverseDirection = {
-  'up': 'down',
-  'down': 'up',
-  'left': 'right',
-  'right': 'left'
-}
+import VerticalList from './VerticalList.jsx'
 
 /*
-This component listen the window keys events.
-*/
+ * This component listen the window keys events.
+ */
 
-class Navigation extends Component {
-  currentFocusedPath = null;
-  lastFocusedPath = null;
-  lastDirection = null;
-  pause = false;
-  default = null;
-  root = null;
-  focusableComponents = {};
-  focusableIds = 0;
+const gLast = arr => arr[arr.length - 1]
+const gDirectionFromEvent = e => {
+  return ((e.keyCode === KEYBOARD_LEFT.code) && KEYBOARD_LEFT.alias) ||
+         ((e.keyCode === KEYBOARD_UP.code) && KEYBOARD_UP.alias) ||
+         ((e.keyCode === KEYBOARD_RIGHT.code) && KEYBOARD_RIGHT.alias) ||
+         ((e.keyCode === KEYBOARD_DOWN.code) && KEYBOARD_DOWN.alias)
+}
 
-  onKeyDown = (evt) => {
-    if (this._pause || evt.altKey || evt.ctrlKey || evt.metaKey || evt.shiftKey) {
-      return;
-    }
+const KEYBOARD_ALT = { code: 0x12, name: 'Alt' }
+const KEYBOARD_CTRL = { code: 0x11, name: 'Control' }
+const KEYBOARD_META = { code: 0x5b, name: 'Meta', alias: 'command' }
+const KEYBOARD_SHIFT = { code: 0x10, name: 'Shift' }
+const KEYBOARD_LEFT = { code: 0x25, name: 'ArrowLeft', alias: 'left' }
+const KEYBOARD_UP = { code: 0x26, name: 'ArrowUp', alias: 'up' }
+const KEYBOARD_RIGHT = { code: 0x27, name: 'ArrowRight', alias: 'right' }
+const KEYBOARD_DOWN = { code: 0x28, name: 'ArrowDown', alias: 'down' }
+const KEYBOARD_ENTER = { code: 0xd, name: 'Enter', alias: 'enter' }
 
-    const preventDefault = function () {
-      evt.preventDefault();
-      evt.stopPropagation();
-      return false;
-    };
-
-    const direction = this.props.keyMapping[evt.keyCode];
-
-    if (!direction) {
-      if (evt.keyCode === this.props.keyMapping['enter']) {
-        if (this.currentFocusedPath) {
-          if (!this.fireEvent(this.getLastFromPath(this.currentFocusedPath), 'enter-down')) {
-            return preventDefault();
-          }
-        }
-      }
-      return;
-    }
-
-    let currentFocusedPath = this.currentFocusedPath;
-    console.log('currentFocusedPath', currentFocusedPath);
-
-    if (!currentFocusedPath) {
-      currentFocusedPath = this.lastFocusedPath;
-
-      if (!currentFocusedPath) {
-        //this.focusDefault();
-        return preventDefault();
-      }
-    }
-
-    this.focusNext(direction, currentFocusedPath);
-    return preventDefault();
+class Navigation extends React.Component {
+  constructor (props, context) {
+    super(props, context)
+    this.currentFocusedPath = []
+    this.defaultFocus = null
+    this.focusableComponents = {}
+    this.focusableIds = 0
+    this.lastDirection = ''
+    this.lastFocusedPath = []
+    this.root = null
+    this._onKeyDown = this._onKeyDown.bind(this)
+    this.fireEvent = this.fireEvent.bind(this)
+    this.focusNext = this.focusNext.bind(this)
+    this.blur = this.blur.bind(this)
+    this.focus = this.focus.bind(this)
+    this.focusDefault = this.focusDefault.bind(this)
+    this.setDefault = this.setDefault.bind(this)
+    this.addComponent = this.addComponent.bind(this)
+    this.forceFocus = this.forceFocus.bind(this)
+    this.removeFocusableId = this.removeFocusableId.bind(this)
   }
 
-  fireEvent(element, evt, evtProps) {
+  componentDidMount () {
+    if (this.onKeyUp) {
+      window.addEventListener('keyup', this.onKeyUp)
+    }
+    window.addEventListener('keydown', this._onKeyDown)
+    this.focusDefault()
+  }
+
+  getChildContext () {
+    return { navigationComponent: this }
+  }
+
+  render () {
+    return (
+      <VerticalList
+        ref={element => { this.root = element }}
+        focusableId='navigation'
+      >
+        { this.props.children }
+      </VerticalList>
+    )
+  }
+
+  _onKeyDown (e) {
+    switch (e.keyCode) {
+      case (KEYBOARD_LEFT.code):
+      case (KEYBOARD_UP.code):
+      case (KEYBOARD_RIGHT.code):
+      case (KEYBOARD_DOWN.code):
+        let nextFocusedPath = this.lastFocusedPath
+        if (this.currentFocusedPath.length) {
+          nextFocusedPath = this.currentFocusedPath
+        }
+
+        if (nextFocusedPath.length) {
+          const direction = gDirectionFromEvent(e)
+          this.focusNext(direction, nextFocusedPath)
+        }
+        e.preventDefault()
+        e.stopPropagation()
+        return
+      case (KEYBOARD_ENTER.code):
+        if (!this.currentFocusedPath.length) {
+          break
+        }
+        const element = gLast(this.currentFocusedPath)
+        this.fireEvent(element, 'enter-down')
+      case (KEYBOARD_ALT.code):
+      case (KEYBOARD_CTRL.code):
+      case (KEYBOARD_META.code):
+      case (KEYBOARD_SHIFT.code):
+      default:
+        break
+    }
+  }
+
+  fireEvent (element, evt, evtProps) {
     switch (evt) {
       case 'willmove':
-        if (element.props.onWillMove)
-          element.props.onWillMove(evtProps);
-        break;
+        if (element.props.onWillMove) {
+          element.props.onWillMove(evtProps)
+        }
+        break
       case 'onfocus':
-        element.focus(evtProps);
-        break;
+        element.focus(evtProps)
+        break
       case 'onblur':
-        element.blur(evtProps);
-        break;
+        element.blur(evtProps)
+        break
       case 'enter-down':
-        if (element.props.onEnterDown)
-          element.props.onEnterDown(evtProps, this);
-        break;
+        if (element.props.onEnterDown) {
+          element.props.onEnterDown(evtProps, this)
+        }
+        break
       default:
-        return false;
+        return false
     }
-
-    return true;
+    return true
   }
 
-  focusNext(direction, focusedPath) {
-    const next = this.getLastFromPath(focusedPath).getNextFocusFrom(direction);
-    
+  focusNext (direction, focusedPath) {
+    const next = gLast(focusedPath).getNextFocusFrom(direction)
+
     if (next) {
-      this.lastDirection = direction;
-      this.focus(next);
+      this.lastDirection = direction
+      this.focus(next)
     }
   }
 
-  blur(nextTree) {
-    if (this.currentFocusedPath === null)
-      return;
+  blur (nextTree) {
+    if (this.currentFocusedPath === null) {
+      return
+    }
 
-    let changeNode = null;
+    let changeNode = null
 
-    for (let i = 0; i < Math.min(nextTree.length, this.currentFocusedPath.length); ++i) {
-      if (nextTree[i] !== this.currentFocusedPath[i]) {
-        changeNode = i;
-        break;
+    const pathLength = Math.min(nextTree.length, this.currentFocusedPath.length)
+    for (let i = 0; i < pathLength; i = i + 1) {
+      if (nextTree[i] === this.currentFocusedPath[i]) {
+        continue
       }
+      changeNode = i
+      break
     }
 
-    if (changeNode === null)
-      return;
+    if (changeNode === null) {
+      return
+    }
 
-    for (let i = changeNode; i < this.currentFocusedPath.length; ++i) {
-      this.currentFocusedPath[i].blur();
+    for (let i = changeNode; i < this.currentFocusedPath.length; i = i + 1) {
+      this.currentFocusedPath[i].blur()
 
-      if (i < this.currentFocusedPath.length - 1) {
-        this.currentFocusedPath[i].lastFocusChild = this.currentFocusedPath[i + 1].indexInParent;
+      if (!(i < this.currentFocusedPath.length - 1)) {
+        continue
       }
+      this.currentFocusedPath[i].lastFocusChild =
+        this.currentFocusedPath[i + 1].indexInParent
     }
   }
 
-  focus(next) {
-    this.blur(next.treePath);
-    next.focus();
+  focus (next) {
+    this.blur(next.treePath)
+    next.focus()
 
-    const lastPath = this.currentFocusedPath;
-    this.currentFocusedPath = next.treePath;
-    this.lastFocusedPath = lastPath;
+    const lastPath = this.currentFocusedPath
+    this.currentFocusedPath = next.treePath
+    this.lastFocusedPath = lastPath
   }
 
-  getLastFromPath(path) {
-    return path[path.length - 1];
-  }
-
-  focusDefault() {
-    if (this.default !== null) {
-      this.focus(this.default);
+  focusDefault () {
+    if (this.defaultFocus !== null) {
+      this.focus(this.defaultFocus)
     } else {
-      this.focus(this.root.getDefaultFocus());
+      this.focus(this.root.getDefaultFocus())
     }
   }
 
-  setDefault(component) {
+  setDefault (component) {
     if (component.isContainer()) {
-      this.default = component.getDefaultFocus();
+      this.defaultFocus = component.getDefaultFocus()
     } else {
-      this.default = component;
+      this.defaultFocus = component
     }
   }
 
-  addComponent(component, id = null) {
+  addComponent (component, id = null) {
     if (this.focusableComponents[id]) {
-      return id;
-      // throw new Error('Focusable component with id "' + id + '" has already existed!');
+      return id
     }
 
     if (!id) {
-      id = 'focusable-' + this.focusableIds++;
+      id = 'focusable-' + this.focusableIds++
     }
 
-    this.focusableComponents[id] = component;
-    return id;
+    this.focusableComponents[id] = component
+    return id
   }
 
-  forceFocus(focusableId) {
+  forceFocus (focusableId) {
     if (!this.focusableComponents[focusableId]) {
-      throw new Error('Focusable component with id "' + focusableId + '" doesn\'t exists!');
+      throw new Error(
+        'Focusable component with id "' + focusableId + '" doesn\'t exist!'
+      )
     }
 
-    this.focus(this.focusableComponents[focusableId].getDefaultFocus());
+    this.focus(this.focusableComponents[focusableId].getDefaultFocus())
   }
 
-  removeFocusableId(focusableId) {
-    if (this.focusableComponents[focusableId])
+  removeFocusableId (focusableId) {
+    if (this.focusableComponents[focusableId]) {
       delete this.focusableComponents[focusableId]
-  }
-
-  // React Functions
-  componentDidMount() {
-    window.addEventListener('keydown', this.onKeyDown);
-    window.addEventListener('keyup', this.onKeyUp);
-    this.focusDefault();
-  }
-
-  componentWillUnmount() {
-    window.removeEventListener('keyup', this.onKeyUp);
-    window.removeEventListener('keydown', this.onKeyDown);
-  }
-
-  componentWillReceiveProps() {
-    
-  }
-
-  getChildContext() {
-    return { navigationComponent: this };
-  }
-
-  render() {
-    return <VerticalList ref={element => this.root = element} focusableId='navigation'>
-      {this.props.children}
-    </VerticalList>;
+    }
   }
 }
 
-Navigation.defaultProps = {
-  keyMapping: {
-    '37': 'left',
-    '38': 'up',
-    '39': 'right',
-    '40': 'down',
-    'enter': 13
-  }
-};
-
 Navigation.childContextTypes = {
   navigationComponent: PropTypes.object
-};
+}
 
-export default Navigation;
+export default Navigation
